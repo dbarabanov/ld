@@ -3,40 +3,23 @@ package ld
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-type vcfFileReader struct {
-	prop        VariantProperties
-	vcfFilePath string
-}
-
-func (r vcfFileReader) Read() chan *Variant {
-	ch := make(chan *Variant)
-	go readVcfFile(r.vcfFilePath, ch)
-	return ch
-}
-
-func readVcfFile(vcfFilePath string, ch chan *Variant) {
+func readVariants(reader *bufio.Reader, hgIds []string, ch chan *Variant) {
 	var (
-		file   *os.File
-		part   []byte
-		prefix bool
-		err    error
+		part      []byte
+		prefix    bool
+		err       error
+		hgIndexes []uint16
 	)
-	if file, err = os.Open(vcfFilePath); err != nil {
-		//		fmt.Printf("error reading vcf file: %v", err.Error())
-		panic(fmt.Sprintf("error reading vcf file: %v", err.Error()))
-		close(ch)
-		return
-	}
-	defer file.Close()
 
-	reader := bufio.NewReader(file)
 	buffer := bytes.NewBuffer(make([]byte, 0))
 	for {
 		if part, prefix, err = reader.ReadLine(); err != nil {
@@ -44,11 +27,11 @@ func readVcfFile(vcfFilePath string, ch chan *Variant) {
 		}
 		buffer.Write(part)
 		if !prefix {
-			//TODO read hgIndexes from panel file
-			hgIndexes := []uint16{9, 10, 11, 12, 13, 14, 15, 16, 17, 18}
-			v := VcfLineToVariant(buffer.String(), hgIndexes)
-			if v != nil {
-				ch <- v
+			line := buffer.String()
+			if line[0] == '#' {
+				hgIndexes = getHgIndexes(line, hgIds)
+			} else {
+				ch <- VcfLineToVariant(line, hgIndexes)
 			}
 			buffer.Reset()
 		}
@@ -56,44 +39,56 @@ func readVcfFile(vcfFilePath string, ch chan *Variant) {
 	if err == io.EOF {
 		close(ch)
 	} else {
-		//		fmt.Printf("error reading vcf file: %v", err.Error())
-		panic(fmt.Sprintf("error reading vcf file: %v", err.Error()))
-		close(ch)
+		panic(err.Error())
 	}
 }
 
+func getHgIndexes(line string, hgIdx []string) (hgIndexes []uint16) {
+	return []uint16{9, 10, 11, 12, 13, 14, 15, 16}
+}
+
 func VcfLineToVariant(line string, hgIndexes []uint16) (variant *Variant) {
-	if line[0] == '#' {
-		return nil
+	if hgIndexes == nil || len(hgIndexes) == 0 {
+		panic("hgIndexes not initialized")
 	}
 	tokens := strings.Split(line, " ")
-	//fmt.Printf("%v", strings.Split(line, " "))
+	if len(tokens) < int(MaxInt(hgIndexes))+3 {
+		panic(fmt.Sprintf("too few tokens in line: %v", line))
+	}
+
 	var (
 		pos  int
 		rsid uint64
 		err  error
 	)
 	if pos, err = strconv.Atoi(tokens[1]); err != nil {
-		panic(err.Error())
+		panic(fmt.Sprintf("bad line: %v", line))
 	}
-	if rsid, err = strconv.ParseUint(tokens[2][2:len(tokens[2])-1], 0, 64); err != nil {
-		panic(err.Error())
+	rsidString := tokens[2]
+	if len(rsidString) < 4 || rsidString[0:2] != "rs" {
+		panic(fmt.Sprintf("bad rsid in line: %v", line))
 	}
+	if rsid, err = strconv.ParseUint(rsidString[2:len(tokens[2])-1], 0, 64); err != nil {
+		panic(fmt.Sprintf("bad rsid in line: %v", line))
+	}
+
 	alleles := make([]uint8, len(hgIndexes))
-	//	for _, token := range tokens[9:] {
+	r, _ := regexp.Compile(`^[0,1]\|[0,1]$`) //"0|0", "0|1","1|0", "1|1" 
 	for _, index := range hgIndexes {
 		token := tokens[index]
 		//fmt.Printf("%v\n", token)
 		genotype := strings.Split(token, ":")[0]
 		//fmt.Printf("%v\n", genotype)
-		//TODO panic if genotype is unphased
+		if !r.MatchString(genotype) {
+			panic(fmt.Sprintf("bad genotype: %v" + genotype))
+		}
 		if genotype == "0|0" {
 			alleles = append(alleles, 0)
 		} else if genotype == "0|1" {
 			alleles = append(alleles, 1)
 		} else if genotype == "1|0" {
 			alleles = append(alleles, 2)
-		} else {
+		} else if genotype == "1|1" {
 			alleles = append(alleles, 3)
 		}
 	}
@@ -101,11 +96,48 @@ func VcfLineToVariant(line string, hgIndexes []uint16) (variant *Variant) {
 	return &Variant{uint32(pos), rsid, nil}
 }
 
-func NewVcfReader(vcfFilePath string) (v VariantReader, err error) {
-	return VariantReader(&vcfFileReader{VariantProperties{"", 0}, vcfFilePath}), nil
+func OpenVcfFile(vcfFilePath string) (*bufio.Reader, error) {
+	var (
+		file *os.File
+		err  error
+	)
+	if file, err = os.Open(vcfFilePath); err != nil {
+		return nil, err
+	}
+	//TODO close the file after all goroutines are done with it
+	//defer file.Close()
+	return bufio.NewReader(file), nil
 }
 
-type VariantProperties struct {
-	chromosome     string
-	populationSize uint16
+func OpenGzVcfFile(gzVcfFilePath string) (*bufio.Reader, error) {
+	var (
+		file     *os.File
+		fileGzip *gzip.Reader
+		err      error
+	)
+	if file, err = os.Open(gzVcfFilePath); err != nil {
+		return nil, err
+	}
+	//TODO close the file after all goroutines are done with it
+	//defer file.Close()
+	if fileGzip, err = gzip.NewReader(file); err != nil {
+		return nil, err
+	}
+	return bufio.NewReader(fileGzip), nil
+}
+
+func CreateVariantChannel(reader *bufio.Reader, hgIds []string) chan *Variant {
+	ch := make(chan *Variant)
+	go readVariants(reader, hgIds, ch)
+	return ch
+}
+
+func MaxInt(slice []uint16) uint16 {
+	var max uint16
+	for _, s := range slice {
+		if s > max {
+			max = s
+		}
+	}
+	return max
 }

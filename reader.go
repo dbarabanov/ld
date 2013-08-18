@@ -6,23 +6,14 @@ type Variant struct {
 	minor []uint32
 }
 
-type VariantReader interface {
-	Read() chan Variant
-}
-
-type VariantProperties struct {
-	chromosome     string
-	populationSize uint16
-}
-
-type variantReader struct {
-	prop VariantProperties
-}
-
-func (r variantReader) Read() chan Variant {
-	return nil
-}
-
-func NewVcfReader(vcfFilePath string) (v VariantReader, err error) {
-	return VariantReader(&variantReader{VariantProperties{"", 0}}), nil
+func Equal(a, b *Variant) bool {
+	if a.pos != b.pos || a.rsid != b.rsid || len(a.minor) != len(b.minor) {
+		return false
+	}
+	for i := range a.minor {
+		if a.minor[i] != b.minor[i] {
+			return false
+		}
+	}
+	return true
 }
