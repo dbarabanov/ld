@@ -10,12 +10,12 @@ import (
 	"strings"
 )
 
-func readVariants(reader *bufio.Reader, hgIds []string, ch chan *Variant) {
+func readVariants(reader *bufio.Reader, sampleIds []string, ch chan *Variant) {
 	var (
-		part      []byte
-		prefix    bool
-		err       error
-		hgIndexes []uint16
+		part          []byte
+		prefix        bool
+		err           error
+		sampleIndexes []uint16
 	)
 
 	buffer := bytes.NewBuffer(make([]byte, 0))
@@ -27,9 +27,9 @@ func readVariants(reader *bufio.Reader, hgIds []string, ch chan *Variant) {
 		if !prefix {
 			line := buffer.String()
 			if line[0] == '#' {
-				hgIndexes = getHgIndexes(line, hgIds)
+				sampleIndexes = getSampleIndexes(line, sampleIds)
 			} else {
-				ch <- VcfLineToVariant(line, hgIndexes)
+				ch <- VcfLineToVariant(line, sampleIndexes)
 			}
 			buffer.Reset()
 		}
@@ -37,20 +37,20 @@ func readVariants(reader *bufio.Reader, hgIds []string, ch chan *Variant) {
 	if err == io.EOF {
 		close(ch)
 	} else {
-		panic(err.Error())
+		panic(err)
 	}
 }
 
-func getHgIndexes(line string, hgIdx []string) (hgIndexes []uint16) {
+func getSampleIndexes(line string, SampleIds []string) (sampleIndexes []uint16) {
 	return []uint16{9, 10, 11, 12, 13, 14, 15, 16}
 }
 
-func VcfLineToVariant(line string, hgIndexes []uint16) (variant *Variant) {
-	if hgIndexes == nil || len(hgIndexes) == 0 {
-		panic("hgIndexes not initialized")
+func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
+	if sampleIndexes == nil || len(sampleIndexes) == 0 {
+		panic("sampleIndexes not initialized")
 	}
 	tokens := strings.Split(line, " ")
-	if len(tokens) < int(MaxInt(hgIndexes))+3 {
+	if len(tokens) < int(MaxInt(sampleIndexes))+3 {
 		panic(fmt.Sprintf("too few tokens in line: %v", line))
 	}
 
@@ -70,9 +70,9 @@ func VcfLineToVariant(line string, hgIndexes []uint16) (variant *Variant) {
 		panic(fmt.Sprintf("bad rsid in line: %v", line))
 	}
 
-	alleles := make([]uint8, len(hgIndexes))
+	alleles := make([]uint8, len(sampleIndexes))
 	r, _ := regexp.Compile(`^[0,1]\|[0,1]$`) //"0|0", "0|1","1|0", "1|1" 
-	for _, index := range hgIndexes {
+	for _, index := range sampleIndexes {
 		token := tokens[index]
 		//fmt.Printf("%v\n", token)
 		genotype := strings.Split(token, ":")[0]
@@ -94,10 +94,8 @@ func VcfLineToVariant(line string, hgIndexes []uint16) (variant *Variant) {
 	return &Variant{uint32(pos), rsid, nil}
 }
 
-func CreateVariantChannel(reader *bufio.Reader, hgIds []string) chan *Variant {
+func CreateVariantChannel(reader *bufio.Reader, sampleIds []string) chan *Variant {
 	ch := make(chan *Variant)
-	go readVariants(reader, hgIds, ch)
+	go readVariants(reader, sampleIds, ch)
 	return ch
 }
-
-

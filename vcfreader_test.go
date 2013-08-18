@@ -1,7 +1,9 @@
 package ld
 
-import ("testing"
-"bytes")
+import (
+	"bytes"
+	"testing"
+)
 
 func TestVcfFileReader(t *testing.T) {
 	expected := []*Variant{&Variant{9411243, 19161214, nil},
@@ -18,7 +20,7 @@ func TestVcfFileReader(t *testing.T) {
 
 	hgIds := []string{"HG00096", "HG00099", "HG00108"}
 
-	reader, err := OpenVcfFile("sample.vcf")
+	reader, err := OpenVcfFile("test.vcf")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -50,7 +52,7 @@ func TestGzVcfFileReader(t *testing.T) {
 		commentLineCount, totalLineCount int
 	)
 
-	reader, err := OpenGzVcfFile("sample.vcf.gz")
+	reader, err := OpenGzVcfFile("test.vcf.gz")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
