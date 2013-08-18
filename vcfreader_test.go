@@ -18,13 +18,14 @@ func TestVcfFileReader(t *testing.T) {
 		&Variant{9412604, 14504037, nil},
 	}
 
-	hgIds := []string{"HG00096", "HG00099", "HG00108"}
+	sampleIds := []string{"HG00096", "HG00099", "HG00108"}
+    //sampleIds := getSampleIds
 
 	reader, err := OpenVcfFile("test.vcf")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	chVariant := CreateVariantChannel(reader, hgIds)
+	chVariant := CreateVariantChannel(reader, sampleIds)
 	var actual []*Variant
 
 	//TODO: add timeout here

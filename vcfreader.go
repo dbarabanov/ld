@@ -27,7 +27,9 @@ func readVariants(reader *bufio.Reader, sampleIds []string, ch chan *Variant) {
 		if !prefix {
 			line := buffer.String()
 			if line[0] == '#' {
-				sampleIndexes = getSampleIndexes(line, sampleIds)
+				if line[1] != '#' {
+					sampleIndexes = getSampleIndexes(line, sampleIds)
+				}
 			} else {
 				ch <- VcfLineToVariant(line, sampleIndexes)
 			}
@@ -41,17 +43,13 @@ func readVariants(reader *bufio.Reader, sampleIds []string, ch chan *Variant) {
 	}
 }
 
-func getSampleIndexes(line string, SampleIds []string) (sampleIndexes []uint16) {
-	return []uint16{9, 10, 11, 12, 13, 14, 15, 16}
-}
-
 func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 	if sampleIndexes == nil || len(sampleIndexes) == 0 {
 		panic("sampleIndexes not initialized")
 	}
 	tokens := strings.Split(line, " ")
-	if len(tokens) < int(MaxInt(sampleIndexes))+3 {
-		panic(fmt.Sprintf("too few tokens in line: %v", line))
+	if len(tokens) < int(MaxInt(sampleIndexes)) {
+		panic(fmt.Sprintf("too few tokens(%v) in line: %v", len(tokens), line))
 	}
 
 	var (
@@ -70,28 +68,30 @@ func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 		panic(fmt.Sprintf("bad rsid in line: %v", line))
 	}
 
-	alleles := make([]uint8, len(sampleIndexes))
+	//alleles := make([]uint8, len(sampleIndexes))
+	genotypes := make([]string, len(sampleIndexes))
 	r, _ := regexp.Compile(`^[0,1]\|[0,1]$`) //"0|0", "0|1","1|0", "1|1" 
-	for _, index := range sampleIndexes {
+	for i, index := range sampleIndexes {
 		token := tokens[index]
 		//fmt.Printf("%v\n", token)
 		genotype := strings.Split(token, ":")[0]
 		//fmt.Printf("%v\n", genotype)
 		if !r.MatchString(genotype) {
-			panic(fmt.Sprintf("bad genotype: %v" + genotype))
+			panic(fmt.Sprintf("bad genotype: %v in line: %v", genotype, line))
 		}
-		if genotype == "0|0" {
-			alleles = append(alleles, 0)
-		} else if genotype == "0|1" {
-			alleles = append(alleles, 1)
-		} else if genotype == "1|0" {
-			alleles = append(alleles, 2)
-		} else if genotype == "1|1" {
-			alleles = append(alleles, 3)
-		}
+		genotypes[i] = genotype
+		//if genotype == "0|0" {
+		//alleles = append(alleles, 0)
+		//} else if genotype == "0|1" {
+		//alleles = append(alleles, 1)
+		//} else if genotype == "1|0" {
+		//alleles = append(alleles, 2)
+		//} else if genotype == "1|1" {
+		//alleles = append(alleles, 3)
+		//}
 	}
 
-	return &Variant{uint32(pos), rsid, nil}
+	return &Variant{uint32(pos), rsid, CompressGenotypes(genotypes)}
 }
 
 func CreateVariantChannel(reader *bufio.Reader, sampleIds []string) chan *Variant {

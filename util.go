@@ -1,9 +1,11 @@
 package ld
 
 import (
+	"bufio"
 	"compress/gzip"
+	"io/ioutil"
 	"os"
-    "bufio"
+	"strings"
 )
 
 func OpenVcfFile(vcfFilePath string) (*bufio.Reader, error) {
@@ -56,4 +58,46 @@ func Equal(a, b *Variant) bool {
 		}
 	}
 	return true
+}
+
+func getSampleIndexes(line string, sampleIds []string) (sampleIndexes []uint16) {
+	//convert slice to map for efficiency
+	samples := make(map[string]bool)
+	for _, sample := range sampleIds {
+		samples[sample] = true
+	}
+
+	tokens := strings.Split(line, " ")
+	for i, token := range tokens {
+		if samples[token] {
+			sampleIndexes = append(sampleIndexes, uint16(i))
+		}
+	}
+
+	return sampleIndexes
+}
+
+func GetSampleIds(panelFilePath string, population string) []string {
+	var (
+		content []byte
+		err     error
+	)
+	if content, err = ioutil.ReadFile(panelFilePath); err != nil {
+		panic(err)
+	}
+	lines := strings.Split(string(content), "\n")
+
+	populations := make(map[string][]string)
+	for _, line := range lines {
+		tokens := strings.Split(line, "\t")
+		if len(tokens) > 2 {
+			populations[tokens[2]] = append(populations[tokens[2]], tokens[0])
+		}
+	}
+
+	return populations[population]
+}
+
+func CompressGenotypes(genotypes []string) []uint32 {
+return nil
 }
