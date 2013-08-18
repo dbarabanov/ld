@@ -3,10 +3,8 @@ package ld
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -96,48 +94,10 @@ func VcfLineToVariant(line string, hgIndexes []uint16) (variant *Variant) {
 	return &Variant{uint32(pos), rsid, nil}
 }
 
-func OpenVcfFile(vcfFilePath string) (*bufio.Reader, error) {
-	var (
-		file *os.File
-		err  error
-	)
-	if file, err = os.Open(vcfFilePath); err != nil {
-		return nil, err
-	}
-	//TODO close the file after all goroutines are done with it
-	//defer file.Close()
-	return bufio.NewReader(file), nil
-}
-
-func OpenGzVcfFile(gzVcfFilePath string) (*bufio.Reader, error) {
-	var (
-		file     *os.File
-		fileGzip *gzip.Reader
-		err      error
-	)
-	if file, err = os.Open(gzVcfFilePath); err != nil {
-		return nil, err
-	}
-	//TODO close the file after all goroutines are done with it
-	//defer file.Close()
-	if fileGzip, err = gzip.NewReader(file); err != nil {
-		return nil, err
-	}
-	return bufio.NewReader(fileGzip), nil
-}
-
 func CreateVariantChannel(reader *bufio.Reader, hgIds []string) chan *Variant {
 	ch := make(chan *Variant)
 	go readVariants(reader, hgIds, ch)
 	return ch
 }
 
-func MaxInt(slice []uint16) uint16 {
-	var max uint16
-	for _, s := range slice {
-		if s > max {
-			max = s
-		}
-	}
-	return max
-}
+
