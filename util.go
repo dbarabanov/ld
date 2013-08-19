@@ -68,7 +68,7 @@ func getSampleIndexes(line string, sampleIds []string) (sampleIndexes []uint16) 
 		samples[sample] = true
 	}
 
-	tokens := strings.Split(line, " ")
+	tokens := strings.Split(line, "\t")
 	for i, token := range tokens {
 		if samples[token] {
 			sampleIndexes = append(sampleIndexes, uint16(i))
@@ -161,4 +161,11 @@ func bitsToGenotype(bits uint32) string {
 		panic(fmt.Sprintf("bad genotype bits: %v", bits))
 	}
 	return retval
+}
+
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
 }

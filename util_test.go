@@ -24,7 +24,7 @@ func TestPanelFileReader(t *testing.T) {
 
 func TestGetSampleIndexes(t *testing.T) {
 	expected := []uint16{9, 11}
-	actual := getSampleIndexes("#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT HG00096 HG00097 HG00099 HG00100 HG00101 HG00102 HG00103 HG00104 HG00106 HG00108", []string{"HG00096", "HG00099", "HG00171"}) //17 out of 20 in the test file. just enough to make2 variant uint32-s
+	actual := getSampleIndexes("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00096\tHG00097\tHG00099\tHG00100\tHG00101\tHG00102\tHG00103\tHG00104\tHG00106\tHG0010", []string{"HG00096", "HG00099", "HG00171"}) //17 out of 20 in the test file. just enough to make2 variant uint32-s
 	if len(actual) != len(expected) {
 		t.Errorf("got %v. want: %v",
 			actual, expected)
