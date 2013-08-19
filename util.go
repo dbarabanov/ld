@@ -50,11 +50,11 @@ func MaxInt(slice []uint16) uint16 {
 }
 
 func Equal(a, b *Variant) bool {
-	if a.pos != b.pos || a.rsid != b.rsid || len(a.minor) != len(b.minor) {
+	if a.Pos != b.Pos || a.Rsid != b.Rsid || len(a.Genotypes) != len(b.Genotypes) {
 		return false
 	}
-	for i := range a.minor {
-		if a.minor[i] != b.minor[i] {
+	for i := range a.Genotypes {
+		if a.Genotypes[i] != b.Genotypes[i] {
 			return false
 		}
 	}
