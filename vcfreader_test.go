@@ -2,24 +2,26 @@ package ld
 
 import (
 	"bytes"
+	"math"
 	"testing"
 )
 
 func TestVcfFileReader(t *testing.T) {
-	expected := []*Variant{&Variant{9411243, 19161214, nil},
-		&Variant{9411245, 18169135, nil},
-		&Variant{9411254, 18612630, nil},
-		&Variant{9411618, 14122189, nil},
-		&Variant{9412099, 14613416, nil},
-		&Variant{9412126, 14943728, nil},
-		&Variant{9412339, 19085147, nil},
-		&Variant{9412503, 7122088, nil},
-		&Variant{9412603, 14130669, nil},
-		&Variant{9412604, 14504037, nil},
+	expected := []*Variant{&Variant{9411243, 19161214, []uint32{0, 0}},
+		&Variant{9411245, 18169135, []uint32{0, 0}},
+		&Variant{9411254, 18612630, []uint32{0, 0}},
+		&Variant{9411618, 14122189, []uint32{256, 0}},
+		&Variant{9412099, 14613416, []uint32{0, 0}},
+		&Variant{9412126, 14943728, []uint32{uint32(math.Pow(2., 28.)), 0}},
+		&Variant{9412339, 19085147, []uint32{0, 0}},
+		&Variant{9412503, 7122088, []uint32{4160747375, 0}},
+		&Variant{9412603, 14130669, []uint32{0, 0}},
+		&Variant{9412604, 14504037, []uint32{0, 0}},
 	}
+	sampleIds := []string{"HG00096", "HG00101", "HG00102", "HG00103", "HG00104", "HG00106", "HG00108", "HG00109", "HG00110", "HG00111", "HG00112", "HG00113", "HG00114", "HG00116", "HG00117", "HG00118", "HG00119"}
 
-	sampleIds := []string{"HG00096", "HG00099", "HG00108"}
-    //sampleIds := getSampleIds
+	//sampleIds := []string{"HG00096", "HG00099", "HG00108"}
+	//sampleIds := getSampleIds
 
 	reader, err := OpenVcfFile("test.vcf")
 	if err != nil {
@@ -34,7 +36,7 @@ func TestVcfFileReader(t *testing.T) {
 	}
 
 	if len(actual) != len(expected) {
-		t.Errorf("got %v, want %v", actual, expected)
+		t.Errorf("length mismatch. got %v, want %v", actual, expected)
 	} else {
 		for i, v := range actual {
 			if !Equal(v, expected[i]) {

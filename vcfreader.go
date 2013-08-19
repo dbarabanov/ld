@@ -68,7 +68,6 @@ func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 		panic(fmt.Sprintf("bad rsid in line: %v", line))
 	}
 
-	//alleles := make([]uint8, len(sampleIndexes))
 	genotypes := make([]string, len(sampleIndexes))
 	r, _ := regexp.Compile(`^[0,1]\|[0,1]$`) //"0|0", "0|1","1|0", "1|1" 
 	for i, index := range sampleIndexes {
@@ -80,18 +79,10 @@ func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 			panic(fmt.Sprintf("bad genotype: %v in line: %v", genotype, line))
 		}
 		genotypes[i] = genotype
-		//if genotype == "0|0" {
-		//alleles = append(alleles, 0)
-		//} else if genotype == "0|1" {
-		//alleles = append(alleles, 1)
-		//} else if genotype == "1|0" {
-		//alleles = append(alleles, 2)
-		//} else if genotype == "1|1" {
-		//alleles = append(alleles, 3)
-		//}
 	}
+	//fmt.Printf("pos: %v, rsid: %v, genotypes: %v\n", pos, rsid, genotypes)
 
-	return &Variant{uint32(pos), rsid, CompressGenotypes(genotypes)}
+	return &Variant{uint32(pos), rsid, PackGenotypes(genotypes)}
 }
 
 func CreateVariantChannel(reader *bufio.Reader, sampleIds []string) chan *Variant {

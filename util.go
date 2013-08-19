@@ -3,6 +3,7 @@ package ld
 import (
 	"bufio"
 	"compress/gzip"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -98,6 +99,66 @@ func GetSampleIds(panelFilePath string, population string) []string {
 	return populations[population]
 }
 
-func CompressGenotypes(genotypes []string) []uint32 {
-return nil
+const COMPRESSED_GENOTYPE_BIT_LENGTH = 2
+
+const GPI = 32 / COMPRESSED_GENOTYPE_BIT_LENGTH //16. genotypes per unsigned 32 bit integer. every genotype is compressed to 2 bits.
+
+func PackGenotypes(genotypes []string) (compressed []uint32) {
+	num_words := len(genotypes)/GPI + len(genotypes)%GPI
+	compressed = make([]uint32, num_words, num_words)
+	for i, genotype := range genotypes {
+		word := compressed[i/GPI]
+		posInWord := GPI - i%GPI - 1
+		offset := uint32((posInWord) * COMPRESSED_GENOTYPE_BIT_LENGTH)
+		word = word | (genotypeToBits(genotype) << offset)
+		compressed[i/GPI] = word
+	}
+	return compressed
+}
+
+func UnpackGenotypes(compressed []uint32, length int) (genotypes []string, err error) {
+	if len(compressed)*GPI < length {
+		return nil, fmt.Errorf("len(compressed) too short")
+	}
+	genotypes = make([]string, length, length)
+	for i := 0; i < length; i++ {
+		word := compressed[i/GPI]
+		posInWord := GPI - i%GPI - 1
+		offset := uint32((posInWord) * COMPRESSED_GENOTYPE_BIT_LENGTH)
+		bits := ((3 << offset) & word) >> offset //geting value of 2 bits of interest
+		genotypes[i] = bitsToGenotype(bits)
+	}
+	return genotypes, nil
+}
+
+func genotypeToBits(genotype string) uint32 {
+	var retval uint32
+	if genotype == "0|0" {
+		retval = 0
+	} else if genotype == "0|1" {
+		retval = 1
+	} else if genotype == "1|0" {
+		retval = 2
+	} else if genotype == "1|1" {
+		retval = 3
+	} else {
+		panic("bad genotype: " + genotype)
+	}
+	return retval
+}
+
+func bitsToGenotype(bits uint32) string {
+	var retval string
+	if bits == 0 {
+		retval = "0|0"
+	} else if bits == 1 {
+		retval = "0|1"
+	} else if bits == 2 {
+		retval = "1|0"
+	} else if bits == 3 {
+		retval = "1|1"
+	} else {
+		panic(fmt.Sprintf("bad genotype bits: %v", bits))
+	}
+	return retval
 }

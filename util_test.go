@@ -1,6 +1,8 @@
 package ld
 
 import (
+	"fmt"
+	"math"
 	"testing"
 )
 
@@ -22,7 +24,7 @@ func TestPanelFileReader(t *testing.T) {
 
 func TestGetSampleIndexes(t *testing.T) {
 	expected := []uint16{9, 11}
-	actual := getSampleIndexes("#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT HG00096 HG00097 HG00099 HG00100 HG00101 HG00102 HG00103 HG00104 HG00106 HG00108", []string{"HG00096", "HG00099", "HG00171"})
+	actual := getSampleIndexes("#CHROM POS ID REF ALT QUAL FILTER INFO FORMAT HG00096 HG00097 HG00099 HG00100 HG00101 HG00102 HG00103 HG00104 HG00106 HG00108", []string{"HG00096", "HG00099", "HG00171"}) //17 out of 20 in the test file. just enough to make2 variant uint32-s
 	if len(actual) != len(expected) {
 		t.Errorf("got %v. want: %v",
 			actual, expected)
@@ -34,5 +36,61 @@ func TestGetSampleIndexes(t *testing.T) {
 				break
 			}
 		}
+	}
+}
+
+func TestPackGenotypes(t *testing.T) {
+	expected := []uint32{7, uint32(math.Pow(2., 31.))}
+	actual := PackGenotypes([]string{"0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|1", "1|1", "1|0"})
+	if len(actual) != len(expected) {
+		t.Errorf("wrong length. got %v. want: %v",
+			actual, expected)
+	} else {
+		for i, a := range actual {
+			if a != expected[i] {
+				t.Errorf("got %v. want: %v",
+					actual, expected)
+				break
+			}
+		}
+	}
+}
+
+func TestUnPackGenotypes(t *testing.T) {
+	actual, err := UnpackGenotypes([]uint32{7, 2}, 100)
+	//expected_error := errors.New("len(compressed) too short")
+	expected_error := fmt.Errorf("len(compressed) too short")
+	//if err != expected_error {
+	if err == nil || err.Error() != expected_error.Error() {
+		t.Errorf("got error %v. want error: %v", err, expected_error)
+	}
+	actual, err = UnpackGenotypes([]uint32{7, uint32(math.Pow(2., 31.))}, 17)
+	expected := []string{"0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|0", "0|1", "1|1", "1|0"}
+	if len(actual) != len(expected) {
+		t.Errorf("wrong length. got %v. want: %v",
+			actual, expected)
+	} else {
+		for i, a := range actual {
+			if a != expected[i] {
+				t.Errorf("got %v. want: %v",
+					actual, expected)
+				break
+			}
+		}
+	}
+}
+func TestGenotypeToBits(t *testing.T) {
+	actual := genotypeToBits("0|0")
+	var expected uint32 = 0
+	if actual != expected {
+		t.Errorf("got %v. want %v", actual, expected)
+	}
+}
+
+func TestBitsToGenotype(t *testing.T) {
+	actual := bitsToGenotype(1)
+	expected := ("0|1")
+	if actual != expected {
+		t.Errorf("got %v. want %v", actual, expected)
 	}
 }
