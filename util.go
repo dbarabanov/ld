@@ -169,3 +169,39 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+func EqualResult(a, b *Result) bool {
+	if !Equal(a.Variant, b.Variant) {
+		return false
+	}
+	if len(a.Scores) != len(b.Scores) {
+		return false
+	}
+
+	for i, s := range a.Scores {
+		if b.Scores[i] != s {
+			return false
+		}
+	}
+	return true
+}
+
+func EqualResults(a, b []*Result) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, r := range a {
+		if !EqualResult(b[i], r) {
+			return false
+		}
+	}
+	return true
+}
+
+func (r Result) String() string {
+	return fmt.Sprintf("Result{%v, %v}", r.Variant, r.Scores)
+}
+
+func (v Variant) String() string {
+	return fmt.Sprintf("Variant{%v, %v, %v}", v.Pos, v.Rsid, v.Genotypes)
+}
