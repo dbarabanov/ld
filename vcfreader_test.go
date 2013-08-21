@@ -3,14 +3,23 @@ package ld
 import (
 	"bytes"
 	"math"
+	"strconv"
 	"testing"
 )
 
 func TestVcfFileReader(t *testing.T) {
+	var x uint32
+	if i, err := strconv.ParseUint("00000000000000000000000100000000", 2, 32); err != nil {
+		panic(err)
+	} else {
+		x = uint32(i)
+	}
+
 	expected := []*Variant{&Variant{9411243, 19161214, []uint32{0, 0}},
 		&Variant{9411245, 18169135, []uint32{0, 0}},
 		&Variant{9411254, 18612630, []uint32{0, 0}},
-		&Variant{9411618, 14122189, []uint32{256, 0}},
+		//&Variant{9411618, 14122189, []uint32{256, 0}},
+		&Variant{9411618, 14122189, []uint32{x, 0}},
 		&Variant{9412099, 14613416, []uint32{0, 0}},
 		&Variant{9412126, 14943728, []uint32{uint32(math.Pow(2., 28.)), 0}},
 		&Variant{9412339, 19085147, []uint32{0, 0}},

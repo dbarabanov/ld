@@ -104,7 +104,9 @@ const COMPRESSED_GENOTYPE_BIT_LENGTH = 2
 const GPI = 32 / COMPRESSED_GENOTYPE_BIT_LENGTH //16. genotypes per unsigned 32 bit integer. every genotype is compressed to 2 bits.
 
 func PackGenotypes(genotypes []string) (compressed []uint32) {
-	num_words := len(genotypes)/GPI + len(genotypes)%GPI
+	num_words := len(genotypes)/GPI 
+    if len(genotypes)%GPI != 0{
+    num_words ++}
 	compressed = make([]uint32, num_words, num_words)
 	for i, genotype := range genotypes {
 		word := compressed[i/GPI]

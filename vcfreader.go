@@ -61,15 +61,16 @@ func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 		panic(fmt.Sprintf("bad pos in line: %v", line[0:min(30, len(line))]))
 	}
 	rsidString := tokens[2]
-    if rsidString == "."{
-    rsid = 0} else {
-	if len(rsidString) < 4 || rsidString[0:2] != "rs" {
-		panic(fmt.Sprintf("bad rsid in line: %v", line[0:min(30, len(line))]))
+	if rsidString == "." {
+		rsid = 0
+	} else {
+		if len(rsidString) < 4 || rsidString[0:2] != "rs" {
+			panic(fmt.Sprintf("bad rsid in line: %v", line[0:min(30, len(line))]))
+		}
+		if rsid, err = strconv.ParseUint(rsidString[2:len(tokens[2])-1], 0, 64); err != nil {
+			panic(fmt.Sprintf("bad rsid in line: %v", line[0:min(30, len(line))]))
+		}
 	}
-	if rsid, err = strconv.ParseUint(rsidString[2:len(tokens[2])-1], 0, 64); err != nil {
-		panic(fmt.Sprintf("bad rsid in line: %v", line[0:min(30, len(line))]))
-	}
-    }
 
 	genotypes := make([]string, len(sampleIndexes))
 	r, _ := regexp.Compile(`^[0,1]\|[0,1]$`) //"0|0", "0|1","1|0", "1|1" 
