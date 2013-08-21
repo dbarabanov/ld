@@ -64,11 +64,12 @@ func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 	if rsidString == "." {
 		rsid = 0
 	} else {
-		if len(rsidString) < 4 || rsidString[0:2] != "rs" {
-			panic(fmt.Sprintf("bad rsid in line: %v", line[0:min(30, len(line))]))
-		}
-		if rsid, err = strconv.ParseUint(rsidString[2:len(tokens[2])-1], 0, 64); err != nil {
-			panic(fmt.Sprintf("bad rsid in line: %v", line[0:min(30, len(line))]))
+		if len(rsidString) < 3 || rsidString[0:2] != "rs" {
+			fmt.Printf("bad rsid in line: %v", line[0:min(30, len(line))])
+			rsid = 0
+		} else if rsid, err = strconv.ParseUint(rsidString[2:len(tokens[2])-1], 0, 64); err != nil {
+			fmt.Printf("bad rsid in line: %v", line[0:min(30, len(line))])
+			rsid = 0
 		}
 	}
 
