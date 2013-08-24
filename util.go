@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+    "math"
 )
 
 func OpenVcfFile(vcfFilePath string) (*bufio.Reader, error) {
@@ -237,4 +238,19 @@ func (r Result) String() string {
 
 func (v Variant) String() string {
 	return fmt.Sprintf("Variant{%v, %v, %v}", v.Pos, v.Rsid, v.Genotypes)
+}
+
+func round(x float64, prec int) float64 {
+	var rounder float64
+	pow := math.Pow(10, float64(prec))
+	intermed := x * pow
+	_, frac := math.Modf(intermed)
+
+	if frac >= 0.5 {
+		rounder = math.Ceil(intermed)
+	} else {
+		rounder = math.Floor(intermed)
+	}
+
+	return rounder / pow
 }

@@ -14,8 +14,8 @@ var MockVariantDataset1 = []*Variant{&Variant{9411243, 19161214, []uint32{0, 0}}
 	&Variant{9412126, 14943728, []uint32{268435456, 0}},
 	&Variant{9412339, 19085147, []uint32{0, 0}},
 	&Variant{9412503, 7122088, []uint32{4160747375, 0}},
-	&Variant{9412603, 0, []uint32{0, 0}},
-	&Variant{9412604, 0, []uint32{0, 0}},
+	&Variant{9412603, 0, []uint32{0, 1}},
+	&Variant{9412604, 0, []uint32{0, 3}},
 }
 
 var MockResultDataset1 = []*Result{&Result{&Variant{9411243, 19161214, []uint32{0, 0}}, nil},
@@ -26,8 +26,8 @@ var MockResultDataset1 = []*Result{&Result{&Variant{9411243, 19161214, []uint32{
 	&Result{&Variant{9412126, 14943728, []uint32{268435456, 0}}, nil},
 	&Result{&Variant{9412339, 19085147, []uint32{0, 0}}, nil},
 	&Result{&Variant{9412503, 7122088, []uint32{4160747375, 0}}, nil},
-	&Result{&Variant{9412603, 0, []uint32{0, 0}}, nil},
-	&Result{&Variant{9412604, 0, []uint32{0, 0}}, nil},
+	&Result{&Variant{9412603, 0, []uint32{0, 1}}, []Score{Score{9412604, 0, 0.484848}}},
+	&Result{&Variant{9412604, 0, []uint32{0, 3}}, nil},
 }
 
 func TestRunEngine(t *testing.T) {
@@ -36,7 +36,7 @@ func TestRunEngine(t *testing.T) {
 		err    error
 		actual []*Result
 	)
-	if engine, err = CreateEngine(EngineParameters{10, 17, 0, 2}); err != nil {
+	if engine, err = CreateEngine(EngineParameters{1, 17, 0, 4}); err != nil {
 		panic(err)
 	}
 	chVariant := mockVariantChannel(MockVariantDataset1)
@@ -70,11 +70,11 @@ func TestComputeR2(t *testing.T) {
 	b := []uint32{toInt("1010"), toInt("10")}
 	//fmt.Println(toString(a))
 	//fmt.Println(toString(b))
-	c := make([]uint32, len(a), len(b))
-	for i := range a {
-		c[i] = a[i] & b[i]
+	actual := ComputeR2(a, b, 20)
+	expected := 0.046521
+	if actual != expected {
+		t.Errorf("got %v. want %v", actual, expected)
 	}
-	//fmt.Println(toString(c))
 }
 
 func toInt(bitString string) uint32 {

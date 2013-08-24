@@ -1,32 +1,11 @@
 package ld
 
 import (
-//"fmt"
-//"math"
+	//"fmt"
+	"math"
+
 //"strconv"
 )
-
-type Score struct {
-	Pos  uint32
-	Rsid uint64
-	R2   float64
-}
-
-type Result struct {
-	Variant *Variant
-	Scores  []Score
-}
-
-type EngineParameters struct {
-	WindowSize     uint32
-	PopulationSize uint16
-	R2Threshold    float64
-	NumWorkers     uint16
-}
-
-type Engine interface {
-	Run(chan *Variant) chan *Result
-}
 
 type engine struct {
 	params EngineParameters
@@ -39,7 +18,7 @@ type variantList struct {
 }
 
 func (e engine) Run(chVariant chan *Variant) chan *Result {
-	chResult := make(chan *Result, 5)
+	chResult := make(chan *Result, 5) //TODO expose 5, depth of result queue
 	go runEngine(chVariant, chResult, e.params)
 	return chResult
 }
@@ -48,11 +27,12 @@ func runEngine(chVariant chan *Variant, chResult chan *Result, params EnginePara
 	//var workQueue chan *variantList
 	//TODO expose queue size somewhere (instead of hardcoding "2")
 	//workQueue := make(chan *variantList, params.NumWorkers*2) //make queue a little larger so that workers always have work.
-	reorderQueue := startReorderQueue(params.NumWorkers, chResult)
-	workQueue := startWorkers(params.NumWorkers, reorderQueue)
+	reorderQueue := startReorderQueue(&params, chResult)
+	workQueue := startWorkers(&params, reorderQueue)
 	var head *variantList
 	tail := head
 	for v := range chVariant {
+		//fmt.Printf("v: %v\n", v)
 		if head == nil {
 			head = &variantList{0, v, nil}
 			tail = head
@@ -60,40 +40,45 @@ func runEngine(chVariant chan *Variant, chResult chan *Result, params EnginePara
 			head.next = &variantList{head.index + 1, v, nil}
 			head = head.next
 		}
-		if head.variant.Pos-tail.variant.Pos >= params.WindowSize {
+		//fmt.Printf("head: %v, tail: %v\n", head, tail)
+		if head.variant.Pos-tail.variant.Pos > params.WindowSize {
 			workQueue <- tail
 			tail = tail.next
 		}
 	}
-	for {
-		if tail == nil {
-			break
-		}
+	for tail != nil { //surve up the tail
 		workQueue <- tail
 		tail = tail.next
 	}
 	close(workQueue)
 }
 
-func startReorderQueue(numWorkers uint16, chResult chan *Result) (reorderQueue chan *Result) {
-	reorderQueue = make(chan *Result, numWorkers*10)
-	go reorderResults(reorderQueue, numWorkers, chResult)
+func startReorderQueue(params *EngineParameters, chResult chan *Result) (reorderQueue chan *Result) {
+	reorderQueue = make(chan *Result, params.NumWorkers*10)
+	go reorderResults(reorderQueue, params.NumWorkers, chResult)
 	return reorderQueue
 }
 
-func startWorkers(numWorkers uint16, chResult chan *Result) (workQueue chan *variantList) {
+func startWorkers(params *EngineParameters, chResult chan *Result) (workQueue chan *variantList) {
 	//TODO expose queue size somewhere (instead of hardcoding "2")
-	workQueue = make(chan *variantList, numWorkers*2) //make queue a little larger so that workers always have work.
+	workQueue = make(chan *variantList, params.NumWorkers*2) //make queue a little larger so that workers always have work.
 	var i uint16
-	for i = 0; i < numWorkers; i++ {
-		go runWorker(workQueue, chResult)
+	for i = 0; i < params.NumWorkers; i++ {
+		go runWorker(workQueue, chResult, params)
 	}
 	return workQueue
 }
 
-func runWorker(in chan *variantList, out chan *Result) {
-	for vl := range in {
-		out <- &Result{vl.variant, nil}
+func runWorker(in chan *variantList, out chan *Result, params *EngineParameters) {
+	for vlist := range in {
+		v := vlist.variant
+		next := vlist.next
+		var scores []Score
+		for next != nil && next.variant.Pos-v.Pos <= params.WindowSize {
+			scores = append(scores, Score{next.variant.Pos, next.variant.Rsid, ComputeR2(v.Genotypes, next.variant.Genotypes, params.PopulationSize*2)})
+			next = next.next
+		}
+		out <- &Result{v, scores}
 	}
 	out <- nil
 }
@@ -151,9 +136,12 @@ func union(a []uint32, b []uint32) (c []uint32) {
 func ComputeR2(a []uint32, b []uint32, bitLength uint16) (r2 float64) {
 	pAB := bitCount(union(a, b))
 	pa, pb := bitCount(a), bitCount(b)
-	return calculateR2(pa, pb, pAB, bitLength)
+	if pa == 0 || pb == 0||pa==bitLength||pb==bitLength {
+		return -1
+	}
+	return round(calculateR2(pa, pb, pAB, bitLength),6)
 }
 
-func calculateR2(pa uint16, pb uint16, pAB uint16, size uint16) float64 {
-	return 0
+func calculateR2(pa uint16, pb uint16, aorb uint16, size uint16) float64 {
+	return math.Pow(float64((size-aorb)*size-(size-pa)*(size-pb)), 2) / float64((size-pa)*pa*(size-pb)*pb)
 }
