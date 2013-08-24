@@ -1,6 +1,8 @@
 package ld
 
 import (
+	//"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -61,4 +63,66 @@ func pumpChannel(variants []*Variant, chVariant chan *Variant) {
 		chVariant <- v
 	}
 	close(chVariant)
+}
+
+func TestComputeR2(t *testing.T) {
+	a := []uint32{toInt("1001"), toInt("1")}
+	b := []uint32{toInt("1010"), toInt("10")}
+	//fmt.Println(toString(a))
+	//fmt.Println(toString(b))
+	c := make([]uint32, len(a), len(b))
+	for i := range a {
+		c[i] = a[i] & b[i]
+	}
+	//fmt.Println(toString(c))
+}
+
+func toInt(bitString string) uint32 {
+	if i, err := strconv.ParseUint(bitString, 2, 32); err != nil {
+		panic(err)
+	} else {
+		return uint32(i)
+	}
+	return 0
+}
+
+func toString(a []uint32) (bitStrings []string) {
+	bitStrings = make([]string, len(a), len(a))
+
+	for i := range a {
+		bitStrings[i] = strconv.FormatUint(uint64(a[i]), 2)
+	}
+	return bitStrings
+}
+
+func TestBitCountSingle(t *testing.T) {
+	expected := uint16(6)
+	actual := bitCountSingle(toInt("01011100000000000000001010"))
+	if actual != expected {
+		t.Errorf("got %v. want %v", actual, expected)
+	}
+}
+
+func TestBitCount(t *testing.T) {
+	expected := uint16(5)
+	actual := bitCount([]uint32{toInt("10"), toInt("101"), toInt("1000000000000000000001")})
+	if actual != expected {
+		t.Errorf("got %v. want %v", actual, expected)
+	}
+}
+
+func TestUnion(t *testing.T) {
+	expected := []uint32{toInt("10"), toInt("101")}
+	actual := union([]uint32{toInt("0"), toInt("100")}, []uint32{toInt("10"), toInt("1")})
+	if len(actual) != len(expected) {
+		t.Errorf("got %v. want: %v",
+			actual, expected)
+	} else {
+		for i, a := range actual {
+			if a != expected[i] {
+				t.Errorf("in line %v got %v. want: %v",
+					i, actual, expected)
+			}
+		}
+	}
 }

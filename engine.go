@@ -1,5 +1,11 @@
 package ld
 
+import (
+//"fmt"
+//"math"
+//"strconv"
+)
+
 type Score struct {
 	Pos  uint32
 	Rsid uint64
@@ -108,5 +114,46 @@ func reorderResults(in chan *Result, numWorkers uint16, out chan *Result) {
 }
 
 func CreateEngine(params EngineParameters) (e Engine, err error) {
+	initializeBitCountMap()
 	return Engine(&engine{params}), nil
+}
+
+var bitCountMap map[uint16]uint16
+
+func initializeBitCountMap() {
+	bitCountMap = make(map[uint16]uint16)
+	for pow := uint8(0); pow < 16; pow++ {
+		for i := uint16(0); i < 1<<pow; i++ {
+			bitCountMap[i+1<<pow] = bitCountMap[i] + 1
+		}
+	}
+}
+
+func bitCountSingle(a uint32) uint16 {
+	return bitCountMap[uint16(a)] + bitCountMap[uint16(a>>16)]
+}
+
+func bitCount(genotypes []uint32) (bitCount uint16) {
+	for _, i := range genotypes {
+		bitCount += bitCountSingle(i)
+	}
+	return bitCount
+}
+
+func union(a []uint32, b []uint32) (c []uint32) {
+	c = make([]uint32, len(a), len(a))
+	for i := range a {
+		c[i] = a[i] | b[i]
+	}
+	return c
+}
+
+func ComputeR2(a []uint32, b []uint32, bitLength uint16) (r2 float64) {
+	pAB := bitCount(union(a, b))
+	pa, pb := bitCount(a), bitCount(b)
+	return calculateR2(pa, pb, pAB, bitLength)
+}
+
+func calculateR2(pa uint16, pb uint16, pAB uint16, size uint16) float64 {
+	return 0
 }
