@@ -3,6 +3,7 @@ package ld
 import (
 	"bufio"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -104,9 +105,10 @@ const COMPRESSED_GENOTYPE_BIT_LENGTH = 2
 const GPI = 32 / COMPRESSED_GENOTYPE_BIT_LENGTH //16. genotypes per unsigned 32 bit integer. every genotype is compressed to 2 bits.
 
 func PackGenotypes(genotypes []string) (compressed []uint32) {
-	num_words := len(genotypes)/GPI 
-    if len(genotypes)%GPI != 0{
-    num_words ++}
+	num_words := len(genotypes) / GPI
+	if len(genotypes)%GPI != 0 {
+		num_words++
+	}
 	compressed = make([]uint32, num_words, num_words)
 	for i, genotype := range genotypes {
 		word := compressed[i/GPI]
@@ -172,32 +174,61 @@ func min(a, b int) int {
 	return b
 }
 
-func EqualResult(a, b *Result) bool {
-	if !Equal(a.Variant, b.Variant) {
-		return false
+func EqualResult(a, b *Result) (areEqual bool, err error) {
+	if _, err := EqualVariant(a.Variant, b.Variant); err != nil {
+		return false, err
 	}
-	if len(a.Scores) != len(b.Scores) {
-		return false
+	if _, err := EqualScores(a.Scores, b.Scores); err != nil {
+		return false, err
 	}
 
-	for i, s := range a.Scores {
-		if b.Scores[i] != s {
-			return false
-		}
-	}
-	return true
+	return true, nil
 }
 
-func EqualResults(a, b []*Result) bool {
-	if len(a) != len(b) {
-		return false
+func EqualVariant(a, b *Variant) (areEqual bool, err error) {
+	//if a.Pos != b.Pos || a.Rsid != b.Rsid || len(a.Genotypes) != len(b.Genotypes) {
+	if a.Pos != b.Pos {
+		return false, errors.New(fmt.Sprintf("position mismatch: %v!=%v\n", a.Pos))
+	} else if a.Rsid != b.Rsid {
+		return false, errors.New(fmt.Sprintf("rsid mismatch: %v!=%v\n", a.Rsid, b.Rsid))
+	} else if len(a.Genotypes) != len(b.Genotypes) {
+		return false, errors.New(fmt.Sprintf("len(genotypes) mismatch: %v!=%v\n", len(a.Genotypes), len(b.Genotypes)))
 	}
-	for i, r := range a {
-		if !EqualResult(b[i], r) {
-			return false
+
+	for i := range a.Genotypes {
+		if a.Genotypes[i] != b.Genotypes[i] {
+			return false, errors.New(fmt.Sprintf("genotype mismatch at position %v: %v!=%v\n", i, a.Genotypes[i], b.Genotypes[i]))
 		}
 	}
-	return true
+	return true, nil
+}
+
+func EqualScores(a, b []Score) (areEqual bool, err error) {
+	if len(a) != len(b) {
+		return false, errors.New(fmt.Sprintf("Scores lengths not equal. %v!=%v\n", len(a), len(b)))
+	}
+	for i, s := range a {
+		//if _, err := EqualScore(b[i], s); err != nil {
+		if b[i] != s {
+			return false, errors.New(fmt.Sprintf("different scores at position %v: %v!=%v\n", i, b[i], s))
+		}
+	}
+	return true, nil
+}
+
+//func EqualScore(a,b Score) (areEqual bool, err error) {
+//}
+
+func EqualResults(a, b []*Result) (areEqual bool, err error) {
+	if len(a) != len(b) {
+		return false, errors.New(fmt.Sprintf("Results lengths not equal. %v!=%v\n", len(a), len(b)))
+	}
+	for i, r := range a {
+		if _, err := EqualResult(b[i], r); err != nil {
+			return false, errors.New(fmt.Sprintf("different results at position %v: %v\n", i, err))
+		}
+	}
+	return true, nil
 }
 
 func (r Result) String() string {

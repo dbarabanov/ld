@@ -1,7 +1,6 @@
 package ld
 
 import (
-	//"fmt"
 	"testing"
 )
 
@@ -35,7 +34,7 @@ func TestRunEngine(t *testing.T) {
 		err    error
 		actual []*Result
 	)
-	if engine, err = CreateEngine(EngineParameters{10, 17, 0}); err != nil {
+	if engine, err = CreateEngine(EngineParameters{10, 17, 0, 2}); err != nil {
 		panic(err)
 	}
 	chVariant := mockVariantChannel(MockVariantDataset1)
@@ -46,8 +45,8 @@ func TestRunEngine(t *testing.T) {
 	}
 
 	expected := MockResultDataset1
-	if !EqualResults(actual, expected) {
-		t.Errorf("got %v. want %v", actual, expected)
+	if _, err := EqualResults(actual, expected); err != nil {
+		t.Errorf(err.Error())
 	}
 }
 
