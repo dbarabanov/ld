@@ -45,11 +45,11 @@ func readVariants(reader *bufio.Reader, sampleIds []string, ch chan *Variant) {
 
 func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 	if sampleIndexes == nil || len(sampleIndexes) == 0 {
-		panic(fmt.Sprintf("sampleIndexes not initialized: %v", sampleIndexes))
+		panic(fmt.Sprintf("sampleIndexes not initialized: %v\n", sampleIndexes))
 	}
 	tokens := strings.Split(line, "\t")
 	if len(tokens) < int(MaxInt(sampleIndexes)) {
-		panic(fmt.Sprintf("too few tokens(%v) in line: %v", len(tokens), line))
+		panic(fmt.Sprintf("too few tokens(%v) in line: %v\n", len(tokens), line))
 	}
 
 	var (
@@ -58,17 +58,17 @@ func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 		err  error
 	)
 	if pos, err = strconv.Atoi(tokens[1]); err != nil {
-		panic(fmt.Sprintf("bad pos in line: %v", line[0:min(30, len(line))]))
+		panic(fmt.Sprintf("bad pos in line: %v\n", line[0:min(30, len(line))]))
 	}
 	rsidString := tokens[2]
 	if rsidString == "." {
 		rsid = 0
 	} else {
 		if len(rsidString) < 3 || rsidString[0:2] != "rs" {
-			fmt.Printf("bad rsid in line: %v", line[0:min(30, len(line))])
+			fmt.Printf("bad rsid in line: %v\n", line[0:min(30, len(line))])
 			rsid = 0
 		} else if rsid, err = strconv.ParseUint(rsidString[2:len(tokens[2])-1], 0, 64); err != nil {
-			fmt.Printf("bad rsid in line: %v", line[0:min(30, len(line))])
+			fmt.Printf("bad rsid in line: %v\n", line[0:min(30, len(line))])
 			rsid = 0
 		}
 	}
@@ -81,7 +81,7 @@ func VcfLineToVariant(line string, sampleIndexes []uint16) (variant *Variant) {
 		genotype := strings.Split(token, ":")[0]
 		//fmt.Printf("%v\n", genotype)
 		if !r.MatchString(genotype) {
-			panic(fmt.Sprintf("bad genotype: %v in line: %v", genotype, line))
+			panic(fmt.Sprintf("bad genotype: %v in line: %v\n", genotype, line))
 		}
 		genotypes[i] = genotype
 	}
