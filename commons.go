@@ -27,3 +27,7 @@ type EngineParameters struct {
 type Engine interface {
 	Run(chan *Variant) chan *Result
 }
+
+type ResultWriter interface {
+WriteResults(chan *Result)
+}

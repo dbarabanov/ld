@@ -18,7 +18,7 @@ type variantList struct {
 }
 
 func (e engine) Run(chVariant chan *Variant) chan *Result {
-	chResult := make(chan *Result, 5) //TODO expose 5, depth of result queue
+	chResult := make(chan *Result, 10) //TODO expose 10, depth of result queue
 	go runEngine(chVariant, chResult, e.params)
 	return chResult
 }
@@ -60,8 +60,8 @@ func startReorderQueue(params *EngineParameters, chResult chan *Result) (reorder
 }
 
 func startWorkers(params *EngineParameters, chResult chan *Result) (workQueue chan *variantList) {
-	//TODO expose queue size somewhere (instead of hardcoding "2")
-	workQueue = make(chan *variantList, params.NumWorkers*2) //make queue a little larger so that workers always have work.
+	//TODO expose queue size somewhere (instead of hardcoding "5")
+	workQueue = make(chan *variantList, params.NumWorkers*5) //make queue a little larger so that workers always have work.
 	var i uint16
 	for i = 0; i < params.NumWorkers; i++ {
 		go runWorker(workQueue, chResult, params)
@@ -136,12 +136,14 @@ func union(a []uint32, b []uint32) (c []uint32) {
 func ComputeR2(a []uint32, b []uint32, bitLength uint16) (r2 float64) {
 	pAB := bitCount(union(a, b))
 	pa, pb := bitCount(a), bitCount(b)
-	if pa == 0 || pb == 0||pa==bitLength||pb==bitLength {
+	if pa == 0 || pb == 0 || pa == bitLength || pb == bitLength {
 		return -1
 	}
-	return round(calculateR2(pa, pb, pAB, bitLength),6)
+	//return round(calculateR2(pa, pb, pAB, bitLength), 6)
+	return round(calculateR2(uint64(pa), uint64(pb), uint64(pAB), uint64(bitLength)), 6)
 }
 
-func calculateR2(pa uint16, pb uint16, aorb uint16, size uint16) float64 {
+//func calculateR2(pa uint16, pb uint16, aorb uint16, size uint16) float64 {
+func calculateR2(pa uint64, pb uint64, aorb uint64, size uint64) float64 {
 	return math.Pow(float64((size-aorb)*size-(size-pa)*(size-pb)), 2) / float64((size-pa)*pa*(size-pb)*pb)
 }
