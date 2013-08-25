@@ -3,8 +3,6 @@ package ld
 import (
 	//"fmt"
 	"math"
-
-//"strconv"
 )
 
 type engine struct {
@@ -75,7 +73,10 @@ func runWorker(in chan *variantList, out chan *Result, params *EngineParameters)
 		next := vlist.next
 		var scores []Score
 		for next != nil && next.variant.Pos-v.Pos <= params.WindowSize {
-			scores = append(scores, Score{next.variant.Pos, next.variant.Rsid, ComputeR2(v.Genotypes, next.variant.Genotypes, params.PopulationSize*2)})
+			r2 := ComputeR2(v.Genotypes, next.variant.Genotypes, params.PopulationSize*2)
+			if r2 > params.R2Threshold {
+				scores = append(scores, Score{next.variant.Pos, next.variant.Rsid, r2})
+			}
 			next = next.next
 		}
 		out <- &Result{v, scores}
@@ -139,11 +140,10 @@ func ComputeR2(a []uint32, b []uint32, bitLength uint16) (r2 float64) {
 	if pa == 0 || pb == 0 || pa == bitLength || pb == bitLength {
 		return -1
 	}
-	//return round(calculateR2(pa, pb, pAB, bitLength), 6)
-	return round(calculateR2(uint64(pa), uint64(pb), uint64(pAB), uint64(bitLength)), 6)
+	//fmt.Printf("pa: %v, pb: %v, pAB: %v, bitLength: %v\n", pa, pb, pAB, bitLength)
+	return round(calculateR2(int64(pa), int64(pb), int64(pAB), int64(bitLength)), 6)
 }
 
-//func calculateR2(pa uint16, pb uint16, aorb uint16, size uint16) float64 {
-func calculateR2(pa uint64, pb uint64, aorb uint64, size uint64) float64 {
+func calculateR2(pa int64, pb int64, aorb int64, size int64) float64 {
 	return math.Pow(float64((size-aorb)*size-(size-pa)*(size-pb)), 2) / float64((size-pa)*pa*(size-pb)*pb)
 }

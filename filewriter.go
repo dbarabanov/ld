@@ -13,7 +13,9 @@ func (w fileWriter) WriteResults(ch chan *Result) {
 	for r := range ch {
 		pos1 := r.Variant.Pos
 		for _, s := range r.Scores {
+        if s.R2!=-1{
 			w.file.WriteString(fmt.Sprintf("%v\t%v\t%v\n", pos1, s.Pos, s.R2))
+            }
 		}
 	}
 }

@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"strings"
-    "math"
 )
 
 func OpenVcfFile(vcfFilePath string) (*bufio.Reader, error) {
@@ -91,11 +91,16 @@ func GetSampleIds(panelFilePath string, population string) []string {
 	lines := strings.Split(string(content), "\n")
 
 	populations := make(map[string][]string)
+	all := []string{}
 	for _, line := range lines {
 		tokens := strings.Split(line, "\t")
 		if len(tokens) > 2 {
 			populations[tokens[2]] = append(populations[tokens[2]], tokens[0])
+			all = append(all, tokens[0])
 		}
+	}
+	if population == "" {
+		return all
 	}
 
 	return populations[population]
